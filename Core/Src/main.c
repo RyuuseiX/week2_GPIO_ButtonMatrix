@@ -45,6 +45,12 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 uint16_t Matrix_State = 0;
 uint32_t Matrix_Time_Stamp = 0;
+uint16_t Password[12] = {64, 2, 4, 16, 4096, 32, 4906, 4096, 4096, 1, 4096, -32768};
+                        //6  2  3   4    0   5     0    0    0     1    0     OK
+uint16_t Check_List = 0;
+uint16_t Pre_Check = 0;
+uint8_t Press_Count = 0;
+GPIO_PinState Press_State[2];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -101,6 +107,15 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  if ((Pre_Check & 0b1111111111111111) == 0b0000011111111111)
+	  {
+		  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, 1);
+	  }
+
+	  else
+	  {
+		  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, 0);
+	  }
   }
   /* USER CODE END 3 */
 }
@@ -270,12 +285,31 @@ void ButtonMatrixUpdate()
 	{
 		Matrix_Time_Stamp = HAL_GetTick();
 		int i;
+
 		for (i=0; i<4; i++)
 		{
 			GPIO_PinState Pin_State = HAL_GPIO_ReadPin(Matrix_Port[i], Matrix_Pin[i]);
+			Press_State[0] = Pin_State;
+
 			if (Pin_State == 0)  //Button Pressed
 			{
 				Matrix_State |= ((uint16_t)0x1 << (i + Matrix_Row * 4));
+				if ((Press_State[1] == 1) & (Press_State[0] == 0) & (i==1))
+				{
+					Press_Count += 1;
+					Check_List = Check_List << 1;
+					if (Matrix_State == Password[Press_Count])
+					{
+						Check_List |= 1;
+					}
+
+					if ((Matrix_State & -32768) == -32768)
+					{
+						Press_Count = 0;
+						Pre_Check = Check_List;
+						Check_List = 0;
+					}
+				}
 			}
 
 			else
@@ -289,6 +323,12 @@ void ButtonMatrixUpdate()
 		Matrix_Row = (Matrix_Row +1) % 4;
 		uint8_t Next_Output_Pin = Matrix_Row + 4;
 		HAL_GPIO_WritePin(Matrix_Port[Next_Output_Pin], Matrix_Pin[Next_Output_Pin], 0);
+
+
+		Press_State[1] = Press_State[0];
+
+
+
 	}
 }
 /* USER CODE END 4 */
