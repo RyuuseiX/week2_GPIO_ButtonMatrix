@@ -329,6 +329,12 @@ void ButtonMatrixUpdate()
 				Check_List = 0;
 			}
 
+			else if ((Matrix_State == 128) & (Press_Count != 0))
+			{
+				Press_Count -= 2;
+				Check_List = Check_List >> 2;
+			}
+
 		}
 
 		Last_Matrix_State = Matrix_State;
